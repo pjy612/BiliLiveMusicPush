@@ -42,6 +42,7 @@ namespace FFmpegSharp.Executor
                         RedirectStandardError  = true,
                         RedirectStandardOutput = true,
                         UseShellExecute        = false,
+                        Domain = ".",
                         WorkingDirectory       = workdir,
                         StandardErrorEncoding = Encoding.UTF8,
                         StandardOutputEncoding = Encoding.UTF8,
@@ -60,7 +61,7 @@ namespace FFmpegSharp.Executor
                         while (!p.StandardError.EndOfStream)
                         {
                             message  = p.StandardError.ReadLine();
-                            Console.WriteLine(message);
+                            //Console.WriteLine(message);
                         }
                     }
                     else

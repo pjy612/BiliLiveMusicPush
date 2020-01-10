@@ -2,14 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FFmpegSharp.Executor;
 using NewLife.Json;
 using NewLife.Log;
+using NewLife.Threading;
 using NewLife.Xml;
 
 namespace BiliLiveMusicPush
@@ -55,6 +58,205 @@ namespace BiliLiveMusicPush
         }
 
         static void Main(string[] args)
+        {
+            SetConsoleCtrlHandler(consoleCtrlDelegate, 1);
+            XTrace.UseConsole();
+            var currentDir =
+                new FileInfo(Uri.UnescapeDataString(new Uri(Assembly.GetExecutingAssembly().CodeBase).AbsolutePath));
+            var appPath = currentDir.DirectoryName;
+
+            if (string.IsNullOrWhiteSpace(appPath))
+                throw new ApplicationException("app path not found.");
+            if (!Directory.Exists(Config.Current.MusicPath))
+                throw new ApplicationException("MusicPath path not found.");
+
+            NewBiliRtmpPush();
+            //TestPipeIn();
+            //TestPipeOut();
+            //RunBiliRtmpPush();
+            while (true)
+            {
+                Console.ReadKey(false);
+            }
+        }
+
+        private static void NewBiliRtmpPush()
+        {
+//            Thread bgPushMusic = new Thread(BgMusicPush);
+//            bgPushMusic.Start();
+//            Thread bgFFmpeg = new Thread(BgFFmpegRun);
+//            bgFFmpeg.Start();
+            ThreadPoolX.QueueUserWorkItem(BgMusicPush);
+            ThreadPoolX.QueueUserWorkItem(BgFFmpegRun);
+        }
+
+        private static void BgFFmpegRun()
+        {
+            FileInfo LogoImage = new FileInfo(Config.Current.LogoImage);
+            while (true)
+            {
+                if (Config.Current.rtmpUrl.IsNullOrWhiteSpace() || Config.Current.rtmpAuthKey.IsNullOrWhiteSpace())
+                {
+                    throw new ApplicationException("rtmp config is error.");
+                }
+                StringBuilder sb = new StringBuilder();
+                if (LogoImage.Exists)
+                {
+                    sb.Append($@" -loop 1 -y -i ""{LogoImage.FullName}"" ");
+                }
+                sb.Append($@" -re -i \\.\pipe\bilipush");
+                if (LogoImage.Exists)
+                {
+                    sb.Append($@" -shortest ");
+                }
+                sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
+                if (LogoImage.Exists)
+                {
+                    sb.Append($@" -c:v libx264 -pix_fmt yuvj420p -r 60");
+                }
+                sb.Append($@" -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
+                try
+                {
+                    XTrace.WriteLine(Processor.FFmpeg(sb.ToString()));
+                }
+                catch (Exception e)
+                {
+                    XTrace.WriteException(e);
+                }
+            }
+        }
+
+        private static void BgMusicPush()
+        {
+            List<string> played = new List<string>();
+            try
+            {
+                while (true)
+                {
+                    using (NamedPipeServerStream pipeServer = new NamedPipeServerStream("bilipush", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.WriteThrough, 10000, 10000))
+                    {
+                        Console.WriteLine("NamedPipeServerStream object created.");
+                        Console.WriteLine("Waiting for client connection...");
+                        pipeServer.WaitForConnection();
+                        Console.WriteLine("Client connected.");
+                        try
+                        {
+                            while (true)
+                            {
+                                var files = Config.Current.MusicPath.GetFiles(Config.Current.MusicExt);
+                                Console.WriteLine($"音乐读取完毕 共{files.Count}首");
+                                using (BinaryWriter bw = new BinaryWriter(pipeServer))
+                                {
+                                    while (pipeServer.IsConnected)
+                                    {
+                                        if (pipeServer.CanWrite)
+                                        {
+                                            var file = files.Where(r => !played.Exists(f => f == r)).OrderBy(r => Guid.NewGuid()).FirstOrDefault();
+                                            if (file == null)
+                                            {
+                                                played.Clear();
+                                                continue;
+                                            }
+                                            FileInfo fileInfo = new FileInfo(file);
+                                            byte[] readAllBytes = File.ReadAllBytes(file);
+                                            Console.WriteLine($"正在推送音乐:{fileInfo.Name} 进度:{played.Count + 1}/{files.Count}");
+                                            bw.Write(readAllBytes);
+                                            played.Add(file);
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        // Catch the IOException that is raised if the pipe is broken
+                        // or disconnected.
+                        catch (Exception e)
+                        {
+                            Console.WriteLine("ERROR: {0}", e.Message);
+                            XTrace.WriteException(e);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                XTrace.WriteException(e);
+            }
+        }
+
+        private static void TestPipeIn()
+        {
+            using (NamedPipeServerStream pipeServer = new NamedPipeServerStream("bilipush", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.WriteThrough, 10000, 10000))
+            {
+                Console.WriteLine("NamedPipeServerStream object created.");
+                Console.Write("Waiting for client connection...");
+                pipeServer.WaitForConnection();
+                Console.WriteLine("Client connected.");
+                var files = Config.Current.MusicPath.GetFiles(Config.Current.MusicExt);
+                try
+                {
+                    while (true)
+                    {
+                        using (BinaryWriter bw = new BinaryWriter(pipeServer))
+                        {
+                            while (pipeServer.CanWrite)
+                            {
+                                foreach (var file in files)
+                                {
+                                    FileInfo fileInfo = new FileInfo(file);
+                                    byte[] readAllBytes = File.ReadAllBytes(file);
+                                    Console.WriteLine($"正在推送音乐:{fileInfo.Name}");
+                                    bw.Write(readAllBytes);
+                                }
+                            }
+                        }
+                    }
+                }
+                // Catch the IOException that is raised if the pipe is broken
+                // or disconnected.
+                catch (Exception e)
+                {
+                    Console.WriteLine("ERROR: {0}", e.Message);
+                }
+            }
+        }
+
+        private static void TestPipeOut()
+        {
+            using (NamedPipeServerStream pipeServer = new NamedPipeServerStream("bilipush", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.WriteThrough, 10000, 10000))
+            {
+                Console.WriteLine("NamedPipeServerStream object created.");
+                Console.Write("Waiting for client connection...");
+                pipeServer.WaitForConnection();
+                Console.WriteLine("Client connected.");
+                byte[] bytes = new byte[1024];
+                BinaryWriter bw = new BinaryWriter(new FileStream("text.flv", FileMode.Create));
+                try
+                {
+                    while (true)
+                    {
+                        using (BinaryReader br = new BinaryReader(pipeServer))
+                        {
+                            // Display the read text to the console
+                            int temp;
+                            while (pipeServer.CanRead && (temp = br.Read(bytes, 0, bytes.Length)) > 0)
+                            {
+                                bw.Write(bytes, 0, temp);
+                                Console.WriteLine("Received from server: {0}", bytes.ToHex(0, temp));
+                            }
+                        }
+                    }
+                }
+                // Catch the IOException that is raised if the pipe is broken
+                // or disconnected.
+                catch (Exception e)
+                {
+                    Console.WriteLine("ERROR: {0}", e.Message);
+                }
+            }
+        }
+
+        private static void RunBiliRtmpPush()
         {
             SetConsoleCtrlHandler(consoleCtrlDelegate, 1);
             XTrace.UseConsole();
