@@ -1,0 +1,60 @@
+?streamname=*
+
+
+ffmpeg  -re -stream_loop -1 -i "D:\BaiduNetdiskDownload\劳资的短梦\03这个是游戏本体\Audio\music\14. 勇戦.mp3" -acodec aac -b:v 1500k -b:a 320k -r 60 -f flv "rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+
+ffmpeg.exe  -re -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -acodec aac -b:v 1500k -b:a 320k -r 60 -f flv "rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+
+ffmpeg  -re -stream_loop -1 -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -vcodec copy -acodec aac -b:v 1500k -b:a 320k -r 60 -f flv "rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+
+
+ffmpeg -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -y -r 60 -f flv "rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+
+
+ffmpeg -re -stream_loop -1 -f concat -safe 0 -i list.txt -c copy
+
+ffmpeg  -re -stream_loop -1 -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -c copy -r 1 -f flv "rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+
+ffmpeg  -re -stream_loop -1 -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -c copy -r 1 -f flv "rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+
+
+ffmpeg  -re -i "C:\Users\*\Pictures\6990.png" -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -r 60 -c:v libx264 -c:a aac -b:a 320k -pix_fmt yuvj420p -f flv 1.flv
+| ffplay -i -
+
+"rtmp://txy.live-send.acg.tv/live-txy/?streamname=*"
+
+http://album.sina.com.cn/pic/001hAsEUzy79D5s6HY86c&690
+ffmpeg -r 15 -f image2 -loop 1 -i "C:\Users\*\Pictures\6990.png" -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -s 800x600 -pix_fmt yuvj420p -vcodec libx264 -f flv 1.flv 
+
+
+ffmpeg -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -i "C:\Users\*\Pictures\6990.png" -acodec aac -strict -2 -vcodec libx264 -ar 22050 -ab 128k -ac 2 -pix_fmt yuvj420p -y -f flv 1.flv 
+
+-loop 1 -y -i "C:\Users\*\Pictures\6990.png" 
+ffmpeg -loop 1 -y -i "C:\Users\*\Pictures\6990.png" -i "D:\CloudMusic\Ahxello - Frisbee.mp3" -shortest -acodec copy -vcodec libx264 -pix_fmt yuvj420p -f flv pipe:1.flv|ffplay -i -
+ffmpeg -loop 1 -y -i "C:\Users\*\Pictures\6990.png"  -i "concat:D:\CloudMusic\EastNewSound - 死奏憐音、玲瓏ノ終.mp3|D:\CloudMusic\Ahxello - Frisbee.mp3" -shortest -acodec copy -vcodec libx264 -pix_fmt yuvj420p -f flv 1.flv 
+-f flv 1.flv 
+
+
+ffmpeg -re -f concat -safe 0 -i "D:\Work\VedioFFmpegPushRTMP-master\BiliLiveMusicPush\bin\Release\external\ffmpeg\x64\files.txt" -acodec copy -vcodec libx264 -pix_fmt yuvj420p -f flv pipe:1.flv |ffplay -i pipe:1.flv
+
+ffmpeg -re -f concat -safe 0 -i "D:\Work\VedioFFmpegPushRTMP-master\BiliLiveMusicPush\bin\Release\external\ffmpeg\x64\files.txt" -acodec copy -f flv pipe:1.flv | ffplay -i pipe:1.flv
+
+
+
+ffmpeg -re -f concat -safe 0 -i "D:\Work\VedioFFmpegPushRTMP-master\BiliLiveMusicPush\bin\Release\external\ffmpeg\x64\files.txt" -acodec copy pipe:1.flv | ffplay -i -
+
+ffmpeg -loop 1 -y -i "C:\Users\*\Pictures\6990.png" -re -i "concat:D:\CloudMusic\EastNewSound - 死奏憐音、玲瓏ノ終.mp3|D:\CloudMusic\Ahxello - Frisbee.mp3" -shortest -acodec copy -vcodec libx264 -pix_fmt yuvj420p -f flv \\.\pipe\bilipush
+
+
+
+
+ffmpeg -loop 1 -y -i "C:\Users\*\Pictures\6990.png" -re -i "concat:D:\CloudMusic\EastNewSound - 死奏憐音、玲瓏ノ終.mp3|D:\CloudMusic\Ahxello - Frisbee.mp3" -shortest -acodec copy -vcodec libx264 -pix_fmt yuvj420p -f flv \\.\pipe\bilipush
+
+
+ffmpeg -loop 1 -y -i "C:\Users\*\Pictures\6990.png" -re -i \\.\pipe\bilipush -shortest -acodec copy -vcodec libx264 -pix_fmt yuvj420p -f flv - | ffplay -i -
