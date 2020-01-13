@@ -107,7 +107,7 @@ namespace BiliLiveMusicPush
                 sb.Append($@" -re -i \\.\pipe\bilipush");
                 if (LogoImage.Exists)
                 {
-                    sb.Append($@" -shortest ");
+                    //sb.Append($@" -shortest ");
                 }
                 sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
                 if (LogoImage.Exists)
