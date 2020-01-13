@@ -100,6 +100,7 @@ namespace BiliLiveMusicPush
                     throw new ApplicationException("rtmp config is error.");
                 }
                 StringBuilder sb = new StringBuilder();
+                sb.Append(@" -threads 1");
                 if (LogoImage.Exists)
                 {
                     sb.Append($@" -loop 1 -y -i ""{LogoImage.FullName}"" ");
@@ -112,9 +113,9 @@ namespace BiliLiveMusicPush
                 sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
                 if (LogoImage.Exists)
                 {
-                    sb.Append($@" -c:v libx264 -pix_fmt yuvj420p -r 60");
+                    sb.Append($@" -c:v libx264 -pix_fmt yuvj420p");
                 }
-                sb.Append($@" -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
+                sb.Append($@" -r 2 -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
                 try
                 {
                     XTrace.WriteLine(Processor.FFmpeg(sb.ToString()));
@@ -145,27 +146,24 @@ namespace BiliLiveMusicPush
                             {
                                 var files = Config.Current.MusicPath.GetFiles(Config.Current.MusicExt);
                                 Console.WriteLine($"音乐读取完毕 共{files.Count}首");
-                                using (BinaryWriter bw = new BinaryWriter(pipeServer))
+                                while (pipeServer.IsConnected)
                                 {
-                                    while (pipeServer.IsConnected)
+                                    if (pipeServer.CanWrite)
                                     {
-                                        if (pipeServer.CanWrite)
+                                        var file = files.Where(r => !played.Exists(f => f == r)).OrderBy(r => Guid.NewGuid()).FirstOrDefault();
+                                        if (file == null)
                                         {
-                                            var file = files.Where(r => !played.Exists(f => f == r)).OrderBy(r => Guid.NewGuid()).FirstOrDefault();
-                                            if (file == null)
-                                            {
-                                                played.Clear();
-                                                continue;
-                                            }
-                                            FileInfo fileInfo = new FileInfo(file);
-                                            byte[] readAllBytes = File.ReadAllBytes(file);
-                                            Console.WriteLine($"正在推送音乐:{fileInfo.Name} 进度:{played.Count + 1}/{files.Count}");
-                                            bw.Write(readAllBytes);
-                                            played.Add(file);
+                                            played.Clear();
+                                            continue;
                                         }
+                                        FileInfo fileInfo = new FileInfo(file);
+                                        byte[] readAllBytes = File.ReadAllBytes(file);
+                                        Console.WriteLine($"正在推送音乐:{fileInfo.Name} 进度:{played.Count + 1}/{files.Count}");
+                                        pipeServer.Write(readAllBytes);
+                                        played.Add(file);
                                     }
-                                    break;
                                 }
+                                break;
                             }
                         }
                         // Catch the IOException that is raised if the pipe is broken
