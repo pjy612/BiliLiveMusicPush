@@ -100,7 +100,7 @@ namespace BiliLiveMusicPush
                     throw new ApplicationException("rtmp config is error.");
                 }
                 StringBuilder sb = new StringBuilder();
-                sb.Append(@" -threads 1");
+                //sb.Append(@" -threads 1");
                 if (LogoImage.Exists)
                 {
                     sb.Append($@" -loop 1 -y -i ""{LogoImage.FullName}"" ");
