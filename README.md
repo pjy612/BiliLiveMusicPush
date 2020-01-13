@@ -1,3 +1,5 @@
+参考：https://github.com/BoonyaCSharp-ASP/VedioFFmpegPushRTMP
+目前尽可能实现 24小时无缝推送 音乐+图 到直播间 通过管道实现
 
 ## The project is going to solve what kind of problems?
 
