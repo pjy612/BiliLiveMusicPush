@@ -60,7 +60,7 @@ namespace FFmpegSharp.Media
             @param = string.Format(paramStr, path);
 
             var message = Processor.FFprobe(@param, is_push,
-                id => Task.Run(async () =>
+                (id,s) => Task.Run(async () =>
                 {
                     await Task.Delay(1000);
 
@@ -79,7 +79,6 @@ namespace FFmpegSharp.Media
                     catch (Exception)
                     {
                     }
-
                 }));
 
             if (message.Equals("error", StringComparison.OrdinalIgnoreCase))

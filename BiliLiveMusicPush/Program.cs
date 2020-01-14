@@ -83,35 +83,40 @@ namespace BiliLiveMusicPush
 
         private static void NewBiliRtmpPush()
         {
-//            Thread bgPushMusic = new Thread(BgMusicPush);
-//            bgPushMusic.Start();
-//            Thread bgFFmpeg = new Thread(BgFFmpegRun);
-//            bgFFmpeg.Start();
-//            ThreadPoolX.QueueUserWorkItem(BgMusicPush);
-//            ThreadPoolX.QueueUserWorkItem(BgFFmpegRun);
-            ThreadPoolX.QueueUserWorkItem(BgFFmpegRunEx);
+            //            Thread bgPushMusic = new Thread(BgMusicPush);
+            //            bgPushMusic.Start();
+            //            Thread bgFFmpeg = new Thread(BgFFmpegRun);
+            //            bgFFmpeg.Start();
+            //            ThreadPoolX.QueueUserWorkItem(BgMusicPush);
+            //            ThreadPoolX.QueueUserWorkItem(BgFFmpegRun);
+            BgFFmpegRunEx();
         }
 
         private static void BgFFmpegRunEx()
         {
             FileInfo LogoImage = new FileInfo(Config.Current.LogoImage);
-            List<string> played = new List<string>();
+           
             try
             {
                 while (true)
                 {
-                    var files = Config.Current.MusicPath.GetFiles(Config.Current.MusicExt);
-                    while (true)
+                    List<string> played = new List<string>();
+                    if (Config.Current.MusicExt == null)
                     {
-                        Console.WriteLine($"音乐读取完毕 共{files.Count}首");
-
-                        var file = files.Where(r => !played.Exists(f => f == r)).OrderBy(r => Guid.NewGuid()).FirstOrDefault();
-                        if (file == null)
+                        Config.Current.MusicExt = new[] { "ogg", "mp3", "flac" };
+                        Config.Current.SaveAsync();
+                    }
+                    var files = Config.Current.MusicPath.GetFiles(Config.Current.MusicExt);
+                    Console.WriteLine($"音乐读取完毕 共{files.Count}首");
+                    string file;
+                    while (null != (file = files.Where(r => !played.Exists(f => f == r)).OrderBy(r => Guid.NewGuid()).FirstOrDefault()))
+                    {
+                        FileInfo fileInfo = new FileInfo(file);
+                        if (!fileInfo.Exists)
                         {
-                            played.Clear();
+                            files.Remove(file);
                             continue;
                         }
-                        FileInfo fileInfo = new FileInfo(file);
                         Console.WriteLine($"正在推送音乐:{fileInfo.Name} 进度:{played.Count + 1}/{files.Count}");
                         if (Config.Current.rtmpUrl.IsNullOrWhiteSpace() || Config.Current.rtmpAuthKey.IsNullOrWhiteSpace())
                         {
@@ -137,18 +142,20 @@ namespace BiliLiveMusicPush
                             Image image = Image.FromFile(LogoImage.FullName);
                             //sb.Append($@" -c:v libx264 -pix_fmt yuvj420p");
                             //sb.Append($@" -s 1920x1080 -pix_fmt yuvj420p -vcodec libx264 ");
-                            sb.Append($@" -s {image.Width}x{image.Height} -pix_fmt rgb32 -vcodec libx264 ");
+                            sb.Append($@" -s {image.Width}x{image.Height} -pix_fmt yuvj420p -vcodec libx264 ");
                         }
                         sb.Append($@" -y -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
                         string error = "";
+                        string cmd = "";
                         try
                         {
-                            error = Processor.FFmpeg(sb.ToString());
+                            error = Processor.FFmpeg(sb.ToString(), (i, s) => { cmd = s; });
                             played.Add(file);
                         }
                         catch (Exception e)
                         {
                             XTrace.WriteLine(error);
+                            XTrace.WriteLine(cmd);
                             XTrace.WriteException(e);
                         }
                     }
@@ -397,7 +404,6 @@ namespace BiliLiveMusicPush
     {
         public static List<string> GetFiles(this string dirPath, string[] exts)
         {
-            if (exts == null) exts = new[] {"ogg", "mp3", "flac"};
             return exts.SelectMany(ext => Directory.GetFiles(dirPath, $"*.{ext}", SearchOption.AllDirectories).ToList()).ToList();
         }
     }
