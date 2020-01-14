@@ -103,19 +103,21 @@ namespace BiliLiveMusicPush
                 //sb.Append(@" -threads 1");
                 if (LogoImage.Exists)
                 {
-                    sb.Append($@" -loop 1 -y -i ""{LogoImage.FullName}"" ");
+                    sb.Append($@" -r 15 -f image2 -loop 1 -i ""{LogoImage.FullName}"" ");
                 }
                 sb.Append($@" -re -i \\.\pipe\bilipush");
                 if (LogoImage.Exists)
                 {
                     //sb.Append($@" -shortest ");
                 }
-                sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
+                //sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
+                //sb.Append($@" -c:a copy -ar 44100 -b:a 320k ");
                 if (LogoImage.Exists)
                 {
-                    sb.Append($@" -c:v libx264 -pix_fmt yuvj420p");
+                    //sb.Append($@" -c:v libx264 -pix_fmt yuvj420p");
+                    sb.Append($@" -s 1920x1080 -pix_fmt yuvj420p -vcodec libx264 ");
                 }
-                sb.Append($@" -r 2 -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
+                sb.Append($@" -y -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
                 try
                 {
                     XTrace.WriteLine(Processor.FFmpeg(sb.ToString()));
