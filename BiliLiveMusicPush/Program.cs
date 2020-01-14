@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
@@ -112,10 +113,14 @@ namespace BiliLiveMusicPush
                 }
                 //sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
                 //sb.Append($@" -c:a copy -ar 44100 -b:a 320k ");
+                
+                sb.Append($@" -acodec libmp3lame -ar 44100 -b:a 320k");
                 if (LogoImage.Exists)
                 {
+                    Image image = Image.FromFile(LogoImage.FullName);
                     //sb.Append($@" -c:v libx264 -pix_fmt yuvj420p");
-                    sb.Append($@" -s 1920x1080 -pix_fmt yuvj420p -vcodec libx264 ");
+                    //sb.Append($@" -s 1920x1080 -pix_fmt yuvj420p -vcodec libx264 ");
+                    sb.Append($@" -s {image.Width}x{image.Height} -pix_fmt rgb32 -vcodec libx264 ");
                 }
                 sb.Append($@" -y -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
                 try
