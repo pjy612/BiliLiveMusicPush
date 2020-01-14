@@ -135,7 +135,7 @@ namespace BiliLiveMusicPush
                         }
                         //sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
                         //sb.Append($@" -c:a copy -ar 44100 -b:a 320k ");
-                        sb.Append($@" -c:a libmp3lame -ar 44100 -b:a 320k");
+                        sb.Append($@" -c:a copy -c:a libmp3lame -ar 44100 -b:a 320k");
                         //sb.Append($@" -acodec acc -ar 44100 -b:a 320k");
                         if (LogoImage.Exists)
                         {
