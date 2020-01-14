@@ -87,8 +87,77 @@ namespace BiliLiveMusicPush
 //            bgPushMusic.Start();
 //            Thread bgFFmpeg = new Thread(BgFFmpegRun);
 //            bgFFmpeg.Start();
-            ThreadPoolX.QueueUserWorkItem(BgMusicPush);
-            ThreadPoolX.QueueUserWorkItem(BgFFmpegRun);
+//            ThreadPoolX.QueueUserWorkItem(BgMusicPush);
+//            ThreadPoolX.QueueUserWorkItem(BgFFmpegRun);
+            ThreadPoolX.QueueUserWorkItem(BgFFmpegRunEx);
+        }
+
+        private static void BgFFmpegRunEx()
+        {
+            FileInfo LogoImage = new FileInfo(Config.Current.LogoImage);
+            List<string> played = new List<string>();
+            try
+            {
+                while (true)
+                {
+                    var files = Config.Current.MusicPath.GetFiles(Config.Current.MusicExt);
+                    while (true)
+                    {
+                        Console.WriteLine($"音乐读取完毕 共{files.Count}首");
+
+                        var file = files.Where(r => !played.Exists(f => f == r)).OrderBy(r => Guid.NewGuid()).FirstOrDefault();
+                        if (file == null)
+                        {
+                            played.Clear();
+                            continue;
+                        }
+                        FileInfo fileInfo = new FileInfo(file);
+                        Console.WriteLine($"正在推送音乐:{fileInfo.Name} 进度:{played.Count + 1}/{files.Count}");
+                        if (Config.Current.rtmpUrl.IsNullOrWhiteSpace() || Config.Current.rtmpAuthKey.IsNullOrWhiteSpace())
+                        {
+                            throw new ApplicationException("rtmp config is error.");
+                        }
+                        StringBuilder sb = new StringBuilder();
+                        //sb.Append(@" -threads 1");
+                        if (LogoImage.Exists)
+                        {
+                            sb.Append($@" -r 15 -f image2 -loop 1 -i ""{LogoImage.FullName}"" ");
+                        }
+                        sb.Append($@" -re -i ""{fileInfo.FullName}""");
+                        if (LogoImage.Exists)
+                        {
+                            sb.Append($@" -shortest ");
+                        }
+                        //sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
+                        //sb.Append($@" -c:a copy -ar 44100 -b:a 320k ");
+                        sb.Append($@" -c:a libmp3lame -ar 44100 -b:a 320k");
+                        //sb.Append($@" -acodec acc -ar 44100 -b:a 320k");
+                        if (LogoImage.Exists)
+                        {
+                            Image image = Image.FromFile(LogoImage.FullName);
+                            //sb.Append($@" -c:v libx264 -pix_fmt yuvj420p");
+                            //sb.Append($@" -s 1920x1080 -pix_fmt yuvj420p -vcodec libx264 ");
+                            sb.Append($@" -s {image.Width}x{image.Height} -pix_fmt rgb32 -vcodec libx264 ");
+                        }
+                        sb.Append($@" -y -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
+                        string error = "";
+                        try
+                        {
+                            error = Processor.FFmpeg(sb.ToString());
+                            played.Add(file);
+                        }
+                        catch (Exception e)
+                        {
+                            XTrace.WriteLine(error);
+                            XTrace.WriteException(e);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                XTrace.WriteException(e);
+            }
         }
 
         private static void BgFFmpegRun()
@@ -113,8 +182,9 @@ namespace BiliLiveMusicPush
                 }
                 //sb.Append($@" -c:a aac -ar 44100 -b:a 320k ");
                 //sb.Append($@" -c:a copy -ar 44100 -b:a 320k ");
-                
+
                 sb.Append($@" -acodec libmp3lame -ar 44100 -b:a 320k");
+                //sb.Append($@" -acodec acc -ar 44100 -b:a 320k");
                 if (LogoImage.Exists)
                 {
                     Image image = Image.FromFile(LogoImage.FullName);
@@ -138,6 +208,7 @@ namespace BiliLiveMusicPush
         {
             List<string> played = new List<string>();
             try
+
             {
                 while (true)
                 {
@@ -265,14 +336,16 @@ namespace BiliLiveMusicPush
         {
             SetConsoleCtrlHandler(consoleCtrlDelegate, 1);
             XTrace.UseConsole();
+
             var currentDir =
                 new FileInfo(Uri.UnescapeDataString(new Uri(Assembly.GetExecutingAssembly().CodeBase).AbsolutePath));
-            var appPath = currentDir.DirectoryName;
 
+            var appPath = currentDir.DirectoryName;
             if (string.IsNullOrWhiteSpace(appPath))
                 throw new ApplicationException("app path not found.");
             if (!Directory.Exists(Config.Current.MusicPath))
                 throw new ApplicationException("MusicPath path not found.");
+
             //DirectoryInfo MusicPath = new DirectoryInfo(Config.Current.MusicPath);
             FileInfo LogoImage = new FileInfo(Config.Current.LogoImage);
             while (true)
@@ -324,6 +397,7 @@ namespace BiliLiveMusicPush
     {
         public static List<string> GetFiles(this string dirPath, string[] exts)
         {
+            if (exts == null) exts = new[] {"ogg", "mp3", "flac"};
             return exts.SelectMany(ext => Directory.GetFiles(dirPath, $"*.{ext}", SearchOption.AllDirectories).ToList()).ToList();
         }
     }
@@ -354,6 +428,6 @@ namespace BiliLiveMusicPush
         /// <summary>
         /// 音乐后缀
         /// </summary>
-        public string[] MusicExt { get; set; } = new[] {"mp3", "ogg"};
+        public string[] MusicExt { get; set; }
     }
 }
