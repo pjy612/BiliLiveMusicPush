@@ -89,9 +89,30 @@ namespace BiliLiveMusicPush
             //            bgFFmpeg.Start();
             //            ThreadPoolX.QueueUserWorkItem(BgMusicPush);
             //            ThreadPoolX.QueueUserWorkItem(BgFFmpegRun);
-            BgFFmpegRunEx();
+//            ThreadPoolX.QueueUserWorkItem(BgFFmpegPush);
+            ThreadPoolX.QueueUserWorkItem(BgFFmpegRunEx);
         }
-
+        private static void BgFFmpegPush()
+        {
+            while (true)
+            {
+                if (Config.Current.rtmpUrl.IsNullOrWhiteSpace() || Config.Current.rtmpAuthKey.IsNullOrWhiteSpace())
+                {
+                    throw new ApplicationException("rtmp config is error.");
+                }
+                try
+                {
+                    //-rtsp_transport udp -i 
+                    Processor.FFmpeg($@" -re -i ""{Config.Current.localRtmpUrl}""  -c copy -f flv ""{Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}""");
+                    XTrace.WriteLine("停了...");
+                }
+                catch (Exception e)
+                {
+                    XTrace.WriteException(e);
+                }
+                
+            }
+        }
         private static void BgFFmpegRunEx()
         {
             FileInfo LogoImage = new FileInfo(Config.Current.LogoImage);
@@ -124,11 +145,12 @@ namespace BiliLiveMusicPush
                         }
                         StringBuilder sb = new StringBuilder();
                         //sb.Append(@" -threads 1");
+                        sb.Append(@" -re ");
                         if (LogoImage.Exists)
                         {
-                            sb.Append($@" -r 15 -f image2 -loop 1 -i ""{LogoImage.FullName}"" ");
+                            sb.Append($@"-f image2 -loop 1 -i ""{LogoImage.FullName}"" ");
                         }
-                        sb.Append($@" -re -i ""{fileInfo.FullName}""");
+                        sb.Append($@" -i ""{fileInfo.FullName}""");
                         if (LogoImage.Exists)
                         {
                             sb.Append($@" -shortest ");
@@ -144,7 +166,10 @@ namespace BiliLiveMusicPush
                             //sb.Append($@" -s 1920x1080 -pix_fmt yuvj420p -vcodec libx264 ");
                             sb.Append($@" -s {image.Width}x{image.Height} -pix_fmt yuvj420p -vcodec libx264 ");
                         }
-                        sb.Append($@" -y -f flv {Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}");
+                        sb.Append($@" -r 60 -y -f flv ""{Config.Current.rtmpUrl}{Config.Current.rtmpAuthKey}""");
+                        //sb.Append($@" -y -f flv {Config.Current.localRtmpUrl}");
+                        //sb.Append($@" -y -rtsp_transport tcp -f rtsp {Config.Current.localRtspUrl}");
+                        //sb.Append($@" -y -rtsp_transport tcp -f rtsp {Config.Current.localRtspUrl}");
                         string error = "";
                         string cmd = "";
                         try
@@ -411,6 +436,13 @@ namespace BiliLiveMusicPush
     [JsonConfigFile("config.json")]
     public class Config : JsonConfig<Config>
     {
+        /// <summary>
+        /// 转发用本地推流 配合 Nginx 避免断开...
+        /// </summary>
+        public string localRtspUrl { get; set; } = @"rtsp://127.0.0.1:554/live";
+        public string localRtspPlay { get; set; } = @"rtsp://127.0.0.1/live";
+
+        public string localRtmpUrl { get; set; } = @"rtmp://127.0.0.1:1935/live";
         /// <summary>
         /// 直播地址
         /// </summary>
